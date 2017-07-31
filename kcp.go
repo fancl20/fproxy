@@ -55,7 +55,6 @@ func SetKCPSession(conn *kcp.UDPSession, conf *KCPConfig) {
 	conn.SetMtu(conf.MTU)
 	conn.SetWindowSize(conf.SndWnd, conf.RcvWnd)
 	conn.SetACKNoDelay(conf.AckNodelay)
-	conn.SetKeepAlive(conf.KeepAlive)
 }
 
 func NewKCPListener(laddr string, conf *KCPConfig) (net.Listener, error) {
