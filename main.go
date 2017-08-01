@@ -83,7 +83,7 @@ func main() {
 		if err != nil {
 			c1.Close()
 			log.Println("dial error:", err)
-			return
+			continue
 		}
 		log.Println("connection dialed to:", c2.RemoteAddr())
 
