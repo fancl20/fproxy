@@ -6,70 +6,42 @@ import (
 	"net"
 	"net/url"
 	"os"
+
+	"github.com/fancl20/fproxy/transport"
 )
 
-func Listen(typ, laddr string) (net.Listener, error) {
-	switch typ {
-	case "tcp":
-		return net.Listen("tcp", laddr)
-	case "kcp":
-		return NewKCPListener(laddr, DefaultKCPConf)
-	case "kcpmux":
-		return NewKCPMuxListener(laddr, DefaultKCPConf)
-	default:
-		log.Fatalln("unsupported protocol:", typ)
-	}
-	return nil, nil
-}
-
-func Dial(typ, raddr string) (net.Conn, error) {
-	switch typ {
-	case "tcp":
-		return net.Dial("tcp", raddr)
-	case "kcp":
-		return DialKCP(raddr, DefaultKCPConf)
-	case "kcpmux":
-		return DialKCPMux(raddr, DefaultKCPConf)
-	default:
-		log.Fatalln("unsupported protocol:", typ)
-	}
-	return nil, nil
-}
-
-func Forward(c1, c2 net.Conn) {
+func forward(c1, c2 net.Conn) {
 	defer c1.Close()
 	defer c2.Close()
 
-	ch1 := make(chan struct{})
-	ch2 := make(chan struct{})
-	go func() { io.Copy(c1, c2); close(ch1) }()
-	go func() { io.Copy(c2, c1); close(ch2) }()
-
-	select {
-	case <-ch1:
-	case <-ch2:
-	}
+	ch := make(chan struct{}, 2)
+	go func() { io.Copy(c1, c2); ch <- struct{}{} }()
+	go func() { io.Copy(c2, c1); ch <- struct{}{} }()
+	<-ch
 
 	log.Println("connection closed:", c1.RemoteAddr(), c2.RemoteAddr())
 }
 
-func Parse(u string) (typ, addr string) {
+func parse(u string) *url.URL {
 	uu, err := url.Parse(u)
 	if err != nil {
 		log.Fatalln("invalid addr:", u)
 	}
-	return uu.Scheme, uu.Host
+	return uu
 }
 
 func main() {
 	if len(os.Args) != 3 {
-		log.Fatalln("usage: kcproxy tcp://localAddr kcp://remoteAddr")
+		log.Fatalln("usage: fproxy tcp://localAddr kcp://aes:12345@remoteAddr")
 	}
-	ltyp, laddr := Parse(os.Args[1])
-	rtyp, raddr := Parse(os.Args[2])
-	l, err := Listen(ltyp, laddr)
+	local, remote := parse(os.Args[1]), parse(os.Args[2])
+	l, err := transport.NewListener(local.Scheme, local.Host, local.User)
 	if err != nil {
 		log.Fatalln("listen error:", err)
+	}
+	dial := transport.NewDialFunc(remote.Scheme, remote.User)
+	if dial == nil {
+		log.Fatalln("invalid dialFunc")
 	}
 	for {
 		c1, err := l.Accept()
@@ -79,14 +51,16 @@ func main() {
 		}
 		log.Println("connection accepted from:", c1.RemoteAddr())
 
-		c2, err := Dial(rtyp, raddr)
-		if err != nil {
-			c1.Close()
-			log.Println("dial error:", err)
-			continue
-		}
-		log.Println("connection dialed to:", c2.RemoteAddr())
+		go func() {
+			c2, err := dial(remote.Host)
+			if err != nil {
+				c1.Close()
+				log.Println("dial error:", err)
+				return
+			}
+			log.Println("connection dialed to:", c2.RemoteAddr())
 
-		go Forward(c1, c2)
+			forward(c1, c2)
+		}()
 	}
 }
