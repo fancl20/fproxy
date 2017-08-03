@@ -32,7 +32,7 @@ func Listen(addr string, conf *Config) (net.Listener, error) {
 	if conf.Key == "" {
 		return nil, ErrInvalidKey
 	}
-	blk, _ := kcp.NewAESBlockCrypt([]byte(conf.Key))
+	blk := newCrypt(conf.Crypt, conf.Key)
 	l, err := kcp.ListenWithOptions(addr, blk, conf.DataShard, conf.ParityShard)
 	if err != nil {
 		return nil, err
@@ -58,14 +58,10 @@ func setKCPSession(conn *kcp.UDPSession, conf *Config) error {
 	conn.SetNoDelay(conf.NoDelay, conf.Interval, conf.Resend, conf.NoCongestion)
 	conn.SetWindowSize(conf.SndWnd, conf.RcvWnd)
 	conn.SetACKNoDelay(conf.AckNodelay)
-	if err := conn.SetDSCP(conf.DSCP); err != nil {
-		return err
-	}
-	if err := conn.SetReadBuffer(conf.SockBuf); err != nil {
-		return err
-	}
-	if err := conn.SetWriteBuffer(conf.SockBuf); err != nil {
-		return err
-	}
+
+	// ignore returned error
+	conn.SetDSCP(conf.DSCP)
+	conn.SetReadBuffer(conf.SockBuf)
+	conn.SetWriteBuffer(conf.SockBuf)
 	return nil
 }

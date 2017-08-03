@@ -13,12 +13,12 @@ type DialFunc func(addr string) (net.Conn, error)
 type ListenFunc func(addr string) (net.Listener, error)
 
 func WithMuxDial(f DialFunc) DialFunc {
-	var conns Map
+	conns := NewMap()
 	var g singleflight.Group
 	return func(addr string) (c net.Conn, err error) {
 		ret, ok := conns.Load(addr)
 		if !ok || ret.(*smux.Session).IsClosed() {
-			if ret, err = g.Do("addr", genDialFunc(addr, f, &conns)); err != nil {
+			if ret, err = g.Do("addr", genDialFunc(addr, f, conns)); err != nil {
 				return nil, err
 			}
 		}
@@ -43,7 +43,7 @@ func genDialFunc(addr string, f DialFunc, conns *Map) func() (interface{}, error
 
 type muxListener struct {
 	net.Listener
-	conns        Map
+	conns        *Map
 	connChannel  chan net.Conn
 	errorChannel chan error
 }
@@ -56,6 +56,7 @@ func WithMuxListen(f ListenFunc) ListenFunc {
 		}
 		ret := &muxListener{
 			Listener:     l,
+			conns:        NewMap(),
 			connChannel:  make(chan net.Conn, 10),
 			errorChannel: make(chan error, 10),
 		}

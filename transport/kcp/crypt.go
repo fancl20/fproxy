@@ -18,6 +18,8 @@ func newCrypt(crypt, key string) (block kcp.BlockCrypt) {
 		block, _ = kcp.NewSimpleXORBlockCrypt(pass)
 	case "none":
 		block, _ = kcp.NewNoneBlockCrypt(pass)
+	case "aes":
+		block, _ = kcp.NewAESBlockCrypt(pass)
 	case "aes-128":
 		block, _ = kcp.NewAESBlockCrypt(pass[:16])
 	case "aes-192":
@@ -34,8 +36,6 @@ func newCrypt(crypt, key string) (block kcp.BlockCrypt) {
 		block, _ = kcp.NewXTEABlockCrypt(pass[:16])
 	case "salsa20":
 		block, _ = kcp.NewSalsa20BlockCrypt(pass)
-	case "aes":
-		block, _ = kcp.NewAESBlockCrypt(pass)
 	}
 	return
 }

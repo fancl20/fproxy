@@ -12,6 +12,12 @@ type Map struct {
 	lock sync.Mutex
 }
 
+func NewMap() *Map {
+	return &Map{
+		m: make(map[interface{}]interface{}),
+	}
+}
+
 func (m *Map) Store(key, value interface{}) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
