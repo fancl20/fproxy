@@ -2,6 +2,7 @@ package transport
 
 import (
 	"net"
+	"sync"
 
 	"github.com/golang/groupcache/singleflight"
 	"github.com/xtaci/smux"
@@ -13,7 +14,7 @@ type DialFunc func(addr string) (net.Conn, error)
 type ListenFunc func(addr string) (net.Listener, error)
 
 func WithMuxDial(f DialFunc) DialFunc {
-	conns := NewMap()
+	conns := new(sync.Map)
 	var g singleflight.Group
 	return func(addr string) (c net.Conn, err error) {
 		ret, ok := conns.Load(addr)
@@ -26,7 +27,7 @@ func WithMuxDial(f DialFunc) DialFunc {
 	}
 }
 
-func genDialFunc(addr string, f DialFunc, conns *Map) func() (interface{}, error) {
+func genDialFunc(addr string, f DialFunc, conns *sync.Map) func() (interface{}, error) {
 	return func() (interface{}, error) {
 		c, err := f(addr)
 		if err != nil {
@@ -43,7 +44,7 @@ func genDialFunc(addr string, f DialFunc, conns *Map) func() (interface{}, error
 
 type muxListener struct {
 	net.Listener
-	conns        *Map
+	conns        *sync.Map
 	connChannel  chan net.Conn
 	errorChannel chan error
 }
@@ -56,7 +57,7 @@ func WithMuxListen(f ListenFunc) ListenFunc {
 		}
 		ret := &muxListener{
 			Listener:     l,
-			conns:        NewMap(),
+			conns:        new(sync.Map),
 			connChannel:  make(chan net.Conn, 10),
 			errorChannel: make(chan error, 10),
 		}
