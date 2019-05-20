@@ -18,16 +18,13 @@ func NewListener(scheme, host string, u *url.Userinfo) (net.Listener, error) {
 	case "tcp":
 		return tcp.Listen(host)
 	case "kcp":
-		return WithMuxListen(newKCPListenFunc(u))(host)
+		conf := kcp.DefaultConfig
+		conf.Crypt = u.Username()
+		conf.Key, _ = u.Password()
+		l := func(addr string) (net.Listener, error) {
+			return kcp.Listen(addr, &conf)
+		}
+		return WithMuxListen(l)(host)
 	}
 	return nil, ErrListenSchemeNotSupported
-}
-
-func newKCPListenFunc(u *url.Userinfo) ListenFunc {
-	conf := kcp.DefaultConfig
-	conf.Crypt = u.Username()
-	conf.Key, _ = u.Password()
-	return func(addr string) (net.Listener, error) {
-		return kcp.Listen(addr, &conf)
-	}
 }

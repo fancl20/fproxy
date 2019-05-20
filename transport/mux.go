@@ -4,8 +4,8 @@ import (
 	"net"
 	"sync"
 
-	"github.com/golang/groupcache/singleflight"
 	"github.com/xtaci/smux"
+	"golang.org/x/sync/singleflight"
 )
 
 // A plugable mux for transport layer
@@ -19,7 +19,7 @@ func WithMuxDial(f DialFunc) DialFunc {
 	return func(addr string) (c net.Conn, err error) {
 		ret, ok := conns.Load(addr)
 		if !ok || ret.(*smux.Session).IsClosed() {
-			if ret, err = g.Do("addr", genDialFunc(addr, f, conns)); err != nil {
+			if ret, err, _ = g.Do("addr", genDialFunc(addr, f, conns)); err != nil {
 				return nil, err
 			}
 		}

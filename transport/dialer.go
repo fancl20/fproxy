@@ -13,16 +13,13 @@ func NewDialFunc(scheme string, u *url.Userinfo) DialFunc {
 	case "tcp":
 		return tcp.Dial
 	case "kcp":
-		return WithMuxDial(newKCPDialFunc(u))
+		conf := kcp.DefaultConfig
+		conf.Crypt = u.Username()
+		conf.Key, _ = u.Password()
+		l := func(addr string) (net.Conn, error) {
+			return kcp.Dial(addr, &conf)
+		}
+		return WithMuxDial(l)
 	}
 	return nil
-}
-
-func newKCPDialFunc(u *url.Userinfo) DialFunc {
-	conf := kcp.DefaultConfig
-	conf.Crypt = u.Username()
-	conf.Key, _ = u.Password()
-	return func(addr string) (net.Conn, error) {
-		return kcp.Dial(addr, &conf)
-	}
 }
