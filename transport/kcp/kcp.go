@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net"
 
-	"github.com/xtaci/kcp-go"
+	"github.com/xtaci/kcp-go/v5"
 )
 
 var (

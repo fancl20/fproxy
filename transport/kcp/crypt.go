@@ -3,7 +3,7 @@ package kcp
 import (
 	"crypto/sha1"
 
-	"github.com/xtaci/kcp-go"
+	"github.com/xtaci/kcp-go/v5"
 	"golang.org/x/crypto/pbkdf2"
 )
 

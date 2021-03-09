@@ -4,7 +4,7 @@ import (
 	"net"
 	"sync"
 
-	"github.com/xtaci/smux"
+	"github.com/xtaci/smux/v2"
 	"golang.org/x/sync/singleflight"
 )
 
